@@ -9,18 +9,13 @@ on s.product_id = m.product_id
 --What is the total amount each customer spent at the restaurant?
 
 select customer_id, sum(price) total_price 
-from dannys_diner.sales s 
-join dannys_diner.menu m
-on s.product_id = m.product_id
-group by customer_id
+from sale_menu_join group by customer_id
 order by total_price desc
 
 --How many days has each customer visited the restaurant?
 
 select customer_id, count(distinct order_date) total_day
-from dannys_diner.sales s 
-join dannys_diner.menu m
-on s.product_id = m.product_id
+from sale_menu_join
 group by customer_id
 order by total_day desc
 
@@ -107,9 +102,45 @@ where (smj.customer_id in ('A','B')) and (order_date < '2021-02-01')
 group by smj.customer_id
 
 
+-- BONUS --
+
+-- Join All The Things
+
+-- The following questions are related creating basic data tables that
+-- Danny and his team can use to quickly derive insights without
+-- needing to join the underlying tables using SQL.
 
 
+create view join_all as
+select 	smj.customer_id,
+		order_date,
+		product_name,
+		price,
+		case when order_date >= join_date then 'Y'
+		else 'N' end as "member"
+from sale_menu_join smj
+left join dannys_diner.members m
+on smj.customer_id = m.customer_id
+order by customer_id, order_date
 
+select * from join_all
+
+-- Rank All The Things
+
+-- Danny also requires further information about the ranking of customer products,
+-- but he purposely does not need the ranking for non-member purchases
+-- so he expects null ranking values for the records when
+-- customers are not yet part of the loyalty program.
+
+select 	*,
+		case  
+        when member = 'Y'
+		then rank() over(
+            partition by case when ja.member = 'Y' then 1 else 2 end, customer_id
+            order by order_date) 
+      end as Ranking
+from join_all ja
+order by customer_id, order_date
 
 
 
