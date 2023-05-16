@@ -104,17 +104,50 @@ from (select extract(isodow from co.order_time) as "Day of the Week",
       group by extract(isodow from co.order_time)
      ) t
 order by "Day of the Week"
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+
+
+-- SECTION B
+
+-- How many runners signed up for each 1 week period? (i.e. week starts 2021-01-01)
+
+SELECT MIN(registration_date) AS start_date, COUNT(*) AS occurrences
+FROM pizza_runner.runners r 
+GROUP BY extract(WEEK from registration_date)
+order by start_date
+
+-- What was the average time in minutes it took for each runner
+-- to arrive at the Pizza Runner HQ to pickup the order?
+
+select ro.runner_id , 
+	round(avg(CAST(SUBSTRING(duration FROM 1 FOR 2) AS INTEGER)), 2)  AS duration_time
+from pizza_runner.runner_orders ro 
+join pizza_runner.runners r on ro.runner_id = r.runner_id
+where ro.cancellation is null
+group by ro.runner_id 
+
+-- Is there any relationship between the number of pizzas 
+-- and how long the order takes to prepare?
+
+select T.pizza_count, avg(T.time_diff) as prep_time from (
+	select ro.order_id,
+	count(*) as pizza_count,
+	avg(DATE_PART('minute', CAST(ro.pickup_time AS timestamp) - CAST(co.order_time AS timestamp))) AS time_diff
+	from pizza_runner.customer_orders co 
+	join pizza_runner.runner_orders ro on co.order_id = ro.order_id
+	where ro.cancellation is null
+	group by ro.order_id 
+) as T
+group by T.pizza_count
+
+-- What was the average distance travelled for each customer?
+
+select co.customer_id,
+AVG(CAST(REGEXP_REPLACE(ro.distance, '[^\d.]', '', 'g') AS FLOAT)) AS distance_km
+from pizza_runner.customer_orders co
+join pizza_runner.runner_orders ro on ro.order_id  = co.order_id
+where ro.cancellation is null
+group by co.customer_id 
+
 	
 	
 	
